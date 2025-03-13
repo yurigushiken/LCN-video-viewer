@@ -1,0 +1,65 @@
+/* Base styles for the app */
+.App {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Ensure the app takes up the full screen */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Make videos responsive */
+video {
+  max-width: 100%;
+  height: auto;
+  background-color: #000;
+  border-radius: 4px;
+}
+
+/* Customize video controls */
+video::-webkit-media-controls-panel {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Basic styling for the drag and drop areas */
+.bg-gray-200 {
+  background-color: #edf2f7;
+}
+
+.bg-blue-600 {
+  background-color: #3182ce;
+}
+
+.bg-blue-700 {
+  background-color: #2b6cb0;
+}
+
+.text-white {
+  color: #fff;
+}
+
+.rounded {
+  border-radius: 0.25rem;
+}
+
+.shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Ensure cursor shows as pointer over buttons */
+button {
+  cursor: pointer;
+}
+
+/* Styling for the draggable items */
+.cursor-move {
+  cursor: move;
+} 
