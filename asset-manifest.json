@@ -1,14 +1,14 @@
 {
   "files": {
-    "main.css": "/LCN-video-viewer/static/css/main.6be682ca.css",
-    "main.js": "/LCN-video-viewer/static/js/main.c1baa775.js",
+    "main.css": "/LCN-video-viewer/static/css/main.9c444354.css",
+    "main.js": "/LCN-video-viewer/static/js/main.b5d21976.js",
     "static/js/639.3b9e0b9e.chunk.js": "/LCN-video-viewer/static/js/639.3b9e0b9e.chunk.js",
     "index.html": "/LCN-video-viewer/index.html",
-    "main.6be682ca.css.map": "/LCN-video-viewer/static/css/main.6be682ca.css.map",
-    "main.c1baa775.js.map": "/LCN-video-viewer/static/js/main.c1baa775.js.map"
+    "main.9c444354.css.map": "/LCN-video-viewer/static/css/main.9c444354.css.map",
+    "main.b5d21976.js.map": "/LCN-video-viewer/static/js/main.b5d21976.js.map"
   },
   "entrypoints": [
-    "static/css/main.6be682ca.css",
-    "static/js/main.c1baa775.js"
+    "static/css/main.9c444354.css",
+    "static/js/main.b5d21976.js"
   ]
 }
