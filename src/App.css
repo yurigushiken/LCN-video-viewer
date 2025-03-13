@@ -1,0 +1,139 @@
+/* Base styles for the app */
+.App {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #f5f1e6; /* Soft beige background */
+  color: #4b3b2a; /* Dark brown text for better readability */
+}
+
+/* Ensure the app takes up the full screen */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f1e6; /* Soft beige background */
+}
+
+/* Make videos responsive */
+video {
+  max-width: 100%;
+  height: auto;
+  background-color: #000;
+  border-radius: 4px;
+}
+
+/* Customize video controls */
+video::-webkit-media-controls-panel {
+  background-color: rgba(75, 59, 42, 0.5); /* Dark brown with transparency */
+}
+
+/* Earth tone color palette */
+.bg-primary {
+  background-color: #8b734b; /* Olive brown */
+}
+
+.bg-secondary {
+  background-color: #6b5c45; /* Darker olive */
+}
+
+.bg-accent {
+  background-color: #ab6b51; /* Terracotta */
+}
+
+.bg-light {
+  background-color: #e0d9c9; /* Light beige */
+}
+
+.bg-neutral {
+  background-color: #d3caba; /* Neutral beige/gray */
+}
+
+/* Override Tailwind colors with earth tones */
+.bg-gray-50 {
+  background-color: #f5f1e6 !important; /* Light beige */
+}
+
+.bg-gray-100 {
+  background-color: #e0d9c9 !important; /* Slightly darker beige */
+}
+
+.bg-gray-200 {
+  background-color: #d3caba !important; /* More saturated beige */
+}
+
+.bg-blue-500 {
+  background-color: #698269 !important; /* Sage green */
+}
+
+.bg-blue-600 {
+  background-color: #606c38 !important; /* Olive green */
+}
+
+.bg-blue-700 {
+  background-color: #4a573a !important; /* Darker olive green */
+}
+
+.bg-green-500 {
+  background-color: #798478 !important; /* Gray-green */
+}
+
+.bg-green-600 {
+  background-color: #606c5e !important; /* Darker gray-green */
+}
+
+.bg-red-500 {
+  background-color: #9c6644 !important; /* Rusty brown */
+}
+
+.bg-red-600 {
+  background-color: #7f5539 !important; /* Darker brown */
+}
+
+.bg-yellow-500 {
+  background-color: #c9a66b !important; /* Tan */
+}
+
+.bg-yellow-600 {
+  background-color: #b08d57 !important; /* Darker tan */
+}
+
+.bg-purple-500 {
+  background-color: #876445 !important; /* Brown */
+}
+
+.bg-purple-600 {
+  background-color: #774936 !important; /* Darker brown */
+}
+
+.text-white {
+  color: #f5f1e6 !important; /* Off-white for better readability with earth tones */
+}
+
+.rounded {
+  border-radius: 0.25rem;
+}
+
+.shadow {
+  box-shadow: 0 1px 3px 0 rgba(75, 59, 42, 0.1), 0 1px 2px 0 rgba(75, 59, 42, 0.06);
+}
+
+/* Ensure cursor shows as pointer over buttons */
+button {
+  cursor: pointer;
+}
+
+/* Styling for the draggable items */
+.cursor-move {
+  cursor: move;
+}
+
+/* Apply monospace font to time and frame displays */
+.time-display, .frame-number {
+  font-family: 'IBM Plex Mono', monospace;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+} 

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && powershell -Command \"Get-Content public\\youtube_videos.json | Set-Content build\\youtube_videos.json\"",
+    "build": "react-scripts build && powershell -Command \"Copy-Item -Path public\\youtube_videos.json -Destination build\\youtube_videos.json -Force; Copy-Item -Path public\\thumbnails -Destination build\\thumbnails -Recurse -Force; Copy-Item -Path public\\data -Destination build\\data -Recurse -Force\"",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",

@@ -71,12 +71,10 @@ const VideoComparisonContainer = ({
   const getGridLayout = () => {
     switch(viewMode) {
       case '1x1': return 'grid-cols-1';
-      case '1x2': return 'grid-cols-1 md:grid-cols-2';
-      case '2x1': return 'grid-cols-1 md:grid-cols-2';
-      case '2x2': return 'grid-cols-1 md:grid-cols-2';
-      case '2x3': return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
-      case '3x2': return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
-      default: return 'grid-cols-1 md:grid-cols-2';
+      case '1x2': return 'grid-cols-2';
+      case '2x2': return 'grid-cols-2';
+      case '2x3': return 'grid-cols-3';
+      default: return 'grid-cols-2';
     }
   };
   
@@ -85,12 +83,33 @@ const VideoComparisonContainer = ({
     switch(viewMode) {
       case '1x1': return 1;
       case '1x2': return 2;
-      case '2x1': return 2;
       case '2x2': return 4;
       case '2x3': return 6;
-      case '3x2': return 6;
       default: return 4;
     }
+  };
+  
+  // Get the grid layout style based on the view mode
+  const getGridLayoutStyle = () => {
+    switch(viewMode) {
+      case '1x1': return 'grid-cols-1';
+      case '1x2': return 'grid-cols-2';
+      case '2x2': return 'grid-cols-2';
+      case '2x3': return 'grid-cols-3';
+      default: return 'grid-cols-2';
+    }
+  };
+  
+  // Create a style object for the viewer grid
+  const viewerGridStyle = {
+    display: 'grid',
+    gridTemplateColumns: viewMode === '1x1' ? '1fr' : 
+                         viewMode === '1x2' ? 'repeat(2, 1fr)' : 
+                         viewMode === '2x2' ? 'repeat(2, 1fr)' : 
+                         'repeat(3, 1fr)',
+    gridTemplateRows: viewMode === '1x1' || viewMode === '1x2' ? 'auto' : 
+                      'repeat(2, auto)',
+    gap: '12px'
   };
   
   // Show notification temporarily
@@ -386,29 +405,28 @@ const VideoComparisonContainer = ({
   
   // Controls and layout for time control panel
   const timeControlPanel = (
-    <div className="time-control-panel mb-4 p-3 bg-gray-100 rounded-lg shadow">
+    <div className="time-control-panel bg-gray-100 rounded-lg shadow p-3 w-64 flex flex-col space-y-4">
       <div className="flex flex-col space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col sm:flex-row sm:items-center mb-3 md:mb-0">
-            <div className="text-sm font-medium mr-4">Leader: {viewerSlots[leaderIndex]?.title || 'None'}</div>
-            <div className="text-sm">Current Time: {formatTime(syncTime)}</div>
-          </div>
+        <div className="flex flex-col">
+          <div className="text-sm font-medium mb-2">Leader: {viewerSlots[leaderIndex]?.title || 'None'}</div>
+          <div className="text-sm">Current Time: <span className="time-display">{formatTime(syncTime)}</span></div>
+          <div className="text-sm">Current Frame: <span className="frame-number">{Math.round(syncTime * 30)}</span></div>
         </div>
 
         {/* Master controls section */}
         <div className="border-t pt-3 mt-2">
           <h3 className="font-medium text-sm mb-2">Master Controls</h3>
-          <div className="flex flex-wrap gap-2 items-center">
-            <div className="flex items-center space-x-2">
+          <div className="flex flex-col gap-2">
+            <button
+              className={`${isPlaying ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white px-5 py-2 rounded text-sm w-full`}
+              onClick={togglePlayPause}
+            >
+              {isPlaying ? 'Pause All' : 'Play All'}
+            </button>
+            
+            <div className="flex justify-between space-x-2">
               <button
-                className={`${isPlaying ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white px-5 py-2 rounded text-sm`}
-                onClick={togglePlayPause}
-              >
-                {isPlaying ? 'Pause All' : 'Play All'}
-              </button>
-              
-              <button
-                className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded text-sm"
+                className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded text-sm flex-1"
                 onClick={() => stepFrame(false)}
                 title="Step backward one frame"
               >
@@ -416,96 +434,75 @@ const VideoComparisonContainer = ({
               </button>
               
               <button
-                className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded text-sm"
+                className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded text-sm flex-1"
                 onClick={() => stepFrame(true)}
                 title="Step forward one frame"
               >
                 Frame ⏭
               </button>
-              
-              <button 
-                className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded text-sm"
-                onClick={syncAllToLeader}
-              >
-                Sync Now
-              </button>
-              
-              <button 
-                className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm"
-                onClick={resetAll}
-              >
-                Reset All
-              </button>
             </div>
             
-            <div className="flex-1 flex items-center px-2">
-              <span className="text-xs mr-2 whitespace-nowrap">Scrub All: </span>
-              <input
-                type="range"
-                min="0"
-                max={getMaxDuration() * 30} // Multiply by frame rate (30fps)
-                value={syncTime * 30} // Convert time to frames
-                onChange={(e) => {
-                  const frameValue = parseFloat(e.target.value);
-                  const timeValue = frameValue / 30; // Convert frames back to time
-                  syncAllToTime(timeValue);
-                }}
-                className="w-full"
-                step="1" // Step by 1 frame
-              />
-              <span className="text-xs ml-2">{formatTime(syncTime)} (Frame: {Math.round(syncTime * 30)})</span>
+            <button 
+              className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded text-sm w-full"
+              onClick={syncAllToLeader}
+            >
+              Sync Now
+            </button>
+            
+            <button 
+              className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm w-full"
+              onClick={resetAll}
+            >
+              Reset All
+            </button>
+            
+            <div className="mt-4">
+              <div className="flex flex-col">
+                <span className="text-xs mb-1">Scrub All: </span>
+                <input
+                  type="range"
+                  min="0"
+                  max={getMaxDuration() * 30} // Multiply by frame rate (30fps)
+                  value={syncTime * 30} // Convert time to frames
+                  onChange={(e) => {
+                    const frameValue = parseFloat(e.target.value);
+                    const timeValue = frameValue / 30; // Convert frames back to time
+                    syncAllToTime(timeValue);
+                  }}
+                  className="w-full"
+                  step="1" // Step by 1 frame
+                />
+                <span className="text-xs mt-1 time-display">{formatTime(syncTime)}</span>
+                <span className="text-xs frame-number">(Frame: {Math.round(syncTime * 30)})</span>
+              </div>
             </div>
             
-            <div className="w-full mt-2">
+            <div className="mt-2">
               <form 
                 onSubmit={jumpToFrame}
-                className="flex items-center"
+                className="flex flex-col"
               >
-                <div className="flex items-center">
-                  <span className="text-xs mr-2">Jump To Frame:</span>
-                  <input 
-                    type="number" 
-                    name="frameNumber" 
-                    min="0" 
-                    className="w-20 px-2 py-1 border rounded mr-2 text-sm" 
-                    placeholder="frame #"
-                  />
-                  <button 
-                    type="submit" 
-                    className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-sm"
-                  >
-                    Jump
-                  </button>
+                <div className="flex flex-col">
+                  <span className="text-xs mb-1">Jump To Frame:</span>
+                  <div className="flex space-x-1">
+                    <input 
+                      type="number" 
+                      name="frameNumber" 
+                      min="0" 
+                      className="flex-1 px-2 py-1 border rounded text-sm tech-text" 
+                      placeholder="frame #"
+                    />
+                    <button 
+                      type="submit" 
+                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
+                    >
+                      Jump
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-  
-  // Just before the return statement, add this debug section
-  const debugSection = (
-    <div className="mb-8 p-4 bg-gray-100 rounded-lg">
-      <h3 className="text-lg font-bold mb-2">Debug Information</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <h4 className="font-medium">YouTube Videos:</h4>
-          <p>Count: {youtubeVideos.length}</p>
-          <p>Loading: {loading ? 'Yes' : 'No'}</p>
-          {loadError && <p className="text-red-500">Error: {loadError}</p>}
-          <p>Public URL: {process.env.PUBLIC_URL || '(not set)'}</p>
-        </div>
-        <div>
-          <h4 className="font-medium">First 3 Videos:</h4>
-          <ul className="text-xs">
-            {youtubeVideos.slice(0, 3).map(video => (
-              <li key={video.id} className="mb-1">
-                ID: {video.id}, VideoId: {video.videoId}, Title: {video.title}
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
     </div>
@@ -525,12 +522,6 @@ const VideoComparisonContainer = ({
           {notification.message}
         </div>
       )}
-      
-      {/* Debug section */}
-      {debugSection}
-      
-      {/* Time control panel */}
-      {timeControlPanel}
       
       {/* Layout controls */}
       <div className="mb-4 flex flex-col md:flex-row space-y-2 md:space-y-0 md:justify-between md:items-center">
@@ -560,113 +551,119 @@ const VideoComparisonContainer = ({
             2×3
           </button>
         </div>
-        
-        <div className="text-xs bg-gray-100 p-2 rounded">
-          <span className="font-bold mr-1">Debug:</span>
-          First Video Index: {firstVideoIndexRef.current},
-          Leader Index: {leaderIndex}
+      </div>
+      
+      {/* Main content with vertical controls and video grid */}
+      <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+        {/* Vertical controls on the left */}
+        <div className="md:sticky md:top-4 md:self-start">
+          {timeControlPanel}
         </div>
-      </div>
-      
-      {/* Video selection dropdowns */}
-      <div className={`mb-4 grid ${getGridLayout()} gap-2`}>
-        {Array(getVisibleSlots()).fill(null).map((_, slotIndex) => (
-          <div key={`selector-${slotIndex}`} className="flex items-center bg-gray-100 p-2 rounded">
-            <label className="text-sm font-medium mr-2">Slot {slotIndex + 1}:</label>
-            <select 
-              className="flex-1 p-1 border rounded text-sm"
-              value={viewerSlots[slotIndex] ? viewerSlots[slotIndex].id : ""}
-              onChange={(e) => handleVideoSelect(slotIndex, e.target.value)}
-            >
-              <option value="">-- Select a video --</option>
-              {youtubeVideos.map(video => (
-                <option key={video.id} value={video.id}>
-                  {video.title}
-                </option>
-              ))}
-            </select>
-            {viewerSlots[slotIndex] && (
-              <button
-                className="ml-2 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded px-2 py-1"
-                onClick={() => setAsLeader(slotIndex)}
-                disabled={slotIndex === leaderIndex}
-              >
-                {slotIndex === leaderIndex ? 'Leader' : 'Set as Leader'}
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-      
-      {/* Video grid */}
-      <div className={`grid ${getGridLayout()} gap-4 mb-6`}>
-        {Array(getVisibleSlots()).fill(null).map((_, slotIndex) => (
-          <div 
-            key={slotIndex}
-            className="video-slot border rounded-lg overflow-hidden shadow-md bg-white"
-            onDrop={(e) => handleDrop(e, slotIndex)}
-            onDragOver={handleDragOver}
-          >
-            {viewerSlots[slotIndex] ? (
-              <div className="video-container flex flex-col h-full">
-                <div className="flex-grow relative" style={{ paddingBottom: '56.25%' }}>
-                  <YouTubeVideoPlayer
-                    videoId={viewerSlots[slotIndex].videoId}
-                    label={viewerSlots[slotIndex].title || `Video ${slotIndex + 1}`}
-                    isLeader={slotIndex === leaderIndex}
-                    onTimeUpdate={slotIndex === leaderIndex ? handleTimeUpdate : undefined}
-                    syncTime={slotIndex !== leaderIndex ? syncTime : null}
-                    startTime={globalStartTime}
-                    ref={el => {
-                      // Store reference to player component
-                      playerRefs.current[slotIndex] = el;
-                    }}
-                  />
-                </div>
-                
-                <div className="video-controls p-2 bg-gray-100 flex justify-between items-center">
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium mr-2 truncate max-w-[150px]">
-                      {slotIndex === leaderIndex ? '👑 ' : ''}{viewerSlots[slotIndex].title || `Video ${slotIndex + 1}`}
-                    </span>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    {slotIndex !== leaderIndex && (
-                      <button
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap"
-                        onClick={() => setAsLeader(slotIndex)}
-                      >
-                        Set as Leader
-                      </button>
-                    )}
-                    
-                    <a 
-                      href={`https://www.youtube.com/watch?v=${viewerSlots[slotIndex].videoId}&t=${Math.floor(syncTime)}s`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap"
-                    >
-                      Open in Tab
-                    </a>
-                    
+        
+        {/* Video grid on the right */}
+        <div className="flex-1">
+          {/* Video dropdowns */}
+          <div className="video-selection-grid mb-4 grid gap-3" style={viewerGridStyle}>
+            {Array.from({ length: getVisibleSlots() }).map((_, index) => (
+              <div key={`dropdown-${index}`} className="flex flex-col">
+                <div className="flex items-center">
+                  <select
+                    className="flex-1 p-2 border rounded mb-1"
+                    value={viewerSlots[index] ? viewerSlots[index].id : ""}
+                    onChange={(e) => handleVideoSelect(index, e.target.value)}
+                  >
+                    <option value="">-- Select Video --</option>
+                    {youtubeVideos.map(video => (
+                      <option key={video.id} value={video.id}>
+                        {video.title}
+                      </option>
+                    ))}
+                  </select>
+                  {viewerSlots[index] && (
                     <button
-                      className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap"
-                      onClick={() => handleRemoveVideo(slotIndex)}
+                      className="ml-2 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded px-2 py-1"
+                      onClick={() => setAsLeader(index)}
+                      disabled={index === leaderIndex}
                     >
-                      Remove
+                      {index === leaderIndex ? 'Leader' : 'Set as Leader'}
                     </button>
-                  </div>
+                  )}
                 </div>
               </div>
-            ) : (
-              <div className="empty-slot flex flex-col items-center justify-center p-8 bg-gray-50 h-full">
-                <p className="text-gray-500 mb-4">Drag a video here</p>
-                <p className="text-gray-400 text-sm">Slot {slotIndex + 1}</p>
-              </div>
-            )}
+            ))}
           </div>
-        ))}
+          
+          {/* Video grid */}
+          <div className="video-grid grid gap-3" style={viewerGridStyle}>
+            {Array(getVisibleSlots()).fill(null).map((_, slotIndex) => (
+              <div 
+                key={slotIndex}
+                className="video-slot border rounded-lg overflow-hidden shadow-md bg-white"
+                onDrop={(e) => handleDrop(e, slotIndex)}
+                onDragOver={handleDragOver}
+              >
+                {viewerSlots[slotIndex] ? (
+                  <div className="video-container flex flex-col h-full">
+                    <div className="flex-grow relative" style={{ paddingBottom: '56.25%' }}>
+                      <YouTubeVideoPlayer
+                        videoId={viewerSlots[slotIndex].videoId}
+                        label={viewerSlots[slotIndex].title || `Video ${slotIndex + 1}`}
+                        isLeader={slotIndex === leaderIndex}
+                        onTimeUpdate={slotIndex === leaderIndex ? handleTimeUpdate : undefined}
+                        syncTime={slotIndex !== leaderIndex ? syncTime : null}
+                        startTime={globalStartTime}
+                        ref={el => {
+                          // Store reference to player component
+                          playerRefs.current[slotIndex] = el;
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="video-controls p-2 bg-gray-100 flex justify-between items-center">
+                      <div className="flex items-center">
+                        <span className="text-sm font-medium mr-2 truncate max-w-[150px]">
+                          {slotIndex === leaderIndex ? '👑 ' : ''}{viewerSlots[slotIndex].title || `Video ${slotIndex + 1}`}
+                        </span>
+                      </div>
+                      
+                      <div className="flex space-x-2">
+                        {slotIndex !== leaderIndex && (
+                          <button
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap"
+                            onClick={() => setAsLeader(slotIndex)}
+                          >
+                            Set as Leader
+                          </button>
+                        )}
+                        
+                        <a 
+                          href={`https://www.youtube.com/watch?v=${viewerSlots[slotIndex].videoId}&t=${Math.floor(syncTime)}s`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap"
+                        >
+                          Open in Tab
+                        </a>
+                        
+                        <button
+                          className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap"
+                          onClick={() => handleRemoveVideo(slotIndex)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="empty-slot flex flex-col items-center justify-center p-8 bg-gray-50 h-full">
+                    <p className="text-gray-500 mb-4">Drag a video here</p>
+                    <p className="text-gray-400 text-sm">Slot {slotIndex + 1}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

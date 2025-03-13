@@ -11,7 +11,25 @@
   />
   <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
   <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+  <!-- Add IBM Plex Mono and IBM Plex Sans fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
+    /* Apply the fonts globally */
+    body {
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    }
+    
+    /* Apply monospace font to numeric values and technical elements */
+    .tech-text, 
+    code, 
+    pre,
+    .frame-number,
+    .time-display {
+      font-family: 'IBM Plex Mono', monospace;
+    }
+    
     /* Prevent thumbnail flickering */
     img[src$="video-thumbnail.svg"] {
       background-color: #2c3e50;
@@ -65,7 +83,7 @@
       border: none;
     }
   </style>
-  <title>LCN Heat Map Video Comparison Tool</title>
+  <title>LCN Video Comparison Tool - Infant Event Representations</title>
 </head>
 <body>
   <noscript>You need to enable JavaScript to run this app.</noscript>
