@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 // import SyncedVideoPlayer from './SyncedVideoPlayer'; // Unused import
 import YouTubeVideoPlayer from './YouTubeVideoPlayer';
 import { loadYouTubeVideos, formatTime } from '../utils/youtubeUtils';
@@ -8,7 +8,7 @@ import { loadYouTubeVideos, formatTime } from '../utils/youtubeUtils';
 
 const VideoComparisonContainer = ({ 
   videoLibrary = [],
-  initialLayout = '2x3',
+  initialLayout = '2x2',
   onLayoutChange = () => {}
 }) => {
   const [leaderIndex, setLeaderIndex] = useState(0);
@@ -16,17 +16,11 @@ const VideoComparisonContainer = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [viewMode, setViewMode] = useState(initialLayout);
   const [notification, setNotification] = useState(null);
-  const [viewerSlots, setViewerSlots] = useState(Array(6).fill(null));
+  const [viewerSlots, setViewerSlots] = useState(Array(4).fill(null));
   const [globalStartTime] = useState(0); // Removed unused setGlobalStartTime
   const [youtubeVideos, setYoutubeVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
-  // New state for presets
-  const [selectedPreset, setSelectedPreset] = useState('');
-  // New state to track if videos are ready to play
-  const [videosReady, setVideosReady] = useState(false);
-  const [lastPresetChange, setLastPresetChange] = useState(null);
-  
   const playerRefs = useRef([]);
   // const syncIntervalRef = useRef(null); // Unused ref
   const firstVideoIndexRef = useRef(0);
@@ -44,12 +38,8 @@ const VideoComparisonContainer = ({
         console.log('YouTube videos loaded:', videos);
         
         if (videos && videos.length > 0) {
-          // Sort videos alphabetically by title
-          const sortedVideos = [...videos].sort((a, b) => 
-            a.title.localeCompare(b.title)
-          );
-          setYoutubeVideos(sortedVideos);
-          console.log('Set YouTube videos state with', sortedVideos.length, 'videos (sorted alphabetically)');
+          setYoutubeVideos(videos);
+          console.log('Set YouTube videos state with', videos.length, 'videos');
         } else {
           console.error('No YouTube videos found or empty array returned');
           setLoadError('No YouTube videos found. Please check network tab for details.');
@@ -66,192 +56,16 @@ const VideoComparisonContainer = ({
     fetchYouTubeVideos();
   }, []);
   
-  // Calculate available presets from video titles
-  const presets = useMemo(() => {
-    if (!youtubeVideos || youtubeVideos.length === 0) {
-      console.log('No YouTube videos available for presets calculation');
-      return [];
-    }
-    
-    // Extract prefixes like "gw_", "hw_", etc.
-    const prefixSet = new Set();
-    youtubeVideos.forEach(video => {
-      const match = video.title.match(/^([a-z]+)_/);
-      if (match && match[1]) {
-        prefixSet.add(match[1]);
-      }
-    });
-    
-    const presetArray = Array.from(prefixSet).sort();
-    console.log('Calculated presets:', presetArray, 'from', youtubeVideos.length, 'videos');
-    return presetArray;
-  }, [youtubeVideos]);
-  
-  // Handle preset selection
-  const handlePresetSelect = (presetValue) => {
-    setSelectedPreset(presetValue);
-    setVideosReady(false); // Reset ready state
-    
-    if (!presetValue) {
-      // If empty selection, don't change anything
-      return;
-    }
-    
-    // Filter videos to this category
-    const filteredVideos = youtubeVideos.filter(video => 
-      video.title.startsWith(`${presetValue}_`)
-    );
-    
-    // Create a custom sort order for the "gwo" preset to align specific videos with grid layouts
-    if (presetValue === 'gwo') {
-      // Custom ordering for gwo videos to align with grid layouts
-      const priorityVideos = ['gwo_adult', 'gwo_07', 'gwo_08', 'gwo_09'];
-      const sortedVideos = [...filteredVideos].sort((a, b) => {
-        // First check if videos are in the priority list
-        const isPriorityA = priorityVideos.findIndex(p => a.title === p);
-        const isPriorityB = priorityVideos.findIndex(p => b.title === p);
-        
-        // If both are priority videos, sort by their order in the priority list
-        if (isPriorityA >= 0 && isPriorityB >= 0) {
-          return isPriorityA - isPriorityB;
-        }
-        
-        // If only one is a priority video, it comes first
-        if (isPriorityA >= 0) return -1;
-        if (isPriorityB >= 0) return 1;
-        
-        // Otherwise fall back to standard sorting logic
-        // Adult comes first
-        if (a.title.includes('adult')) return -1;
-        if (b.title.includes('adult')) return 1;
-        
-        // Extract numbers for comparison
-        const numA = parseInt(a.title.match(/(\d+)/)?.[1] || 0);
-        const numB = parseInt(b.title.match(/(\d+)/)?.[1] || 0);
-        
-        return numA - numB;
-      });
-      
-      console.log(`Preset ${presetValue} selected with custom ordering. Found ${sortedVideos.length} videos:`, 
-        sortedVideos.map(v => v.title)
-      );
-      
-      // Load videos into slots
-      const visibleSlots = getVisibleSlots();
-      const newViewerSlots = [...viewerSlots];
-      
-      // Fill slots with sorted videos, up to the number of visible slots
-      for (let i = 0; i < Math.min(sortedVideos.length, visibleSlots); i++) {
-        newViewerSlots[i] = sortedVideos[i];
-      }
-      
-      setViewerSlots(newViewerSlots);
-      // Track the preset change timestamp
-      setLastPresetChange(Date.now());
-      showNotification(`Loading ${Math.min(sortedVideos.length, visibleSlots)} ${presetValue} videos with custom alignment`, 'info');
-      return;
-    }
-    
-    // For other presets, use the standard sorting logic
-    // Sort videos by age ("adult" first, then numeric order)
-    const sortedVideos = [...filteredVideos].sort((a, b) => {
-      // Put adult first
-      if (a.title.includes('adult')) return -1;
-      if (b.title.includes('adult')) return 1;
-      
-      // Extract numbers for comparison
-      const numA = parseInt(a.title.match(/(\d+)/)?.[1] || 0);
-      const numB = parseInt(b.title.match(/(\d+)/)?.[1] || 0);
-      
-      return numA - numB;
-    });
-    
-    console.log(`Preset ${presetValue} selected. Found ${sortedVideos.length} videos:`, 
-      sortedVideos.map(v => v.title)
-    );
-    
-    // Load videos into slots
-    const visibleSlots = getVisibleSlots();
-    const newViewerSlots = [...viewerSlots];
-    
-    // Fill slots with sorted videos, up to the number of visible slots
-    for (let i = 0; i < Math.min(sortedVideos.length, visibleSlots); i++) {
-      newViewerSlots[i] = sortedVideos[i];
-    }
-    
-    setViewerSlots(newViewerSlots);
-    // Track the preset change timestamp
-    setLastPresetChange(Date.now());
-    showNotification(`Loading ${Math.min(sortedVideos.length, visibleSlots)} ${presetValue} videos`, 'info');
-  };
-  
-  // Debug player references and check if videos are ready
+  // Debug player references
   useEffect(() => {
-    // Reset ready state when slots change
-    setVideosReady(false);
-    
-    const playerStatus = playerRefs.current.map((ref, i) => ({
-      slot: i,
-      hasRef: !!ref,
-      isReady: ref?.isReady || false,
-      hasVideo: !!viewerSlots[i]
-    }));
-    
-    console.log("Player references updated:", playerStatus);
-    
-    // Check if all videos in slots are ready for playback
-    const checkIfVideosReady = () => {
-      // Only check slots that have videos assigned
-      const filledSlots = viewerSlots.filter(slot => !!slot);
-      if (filledSlots.length === 0) return false;
-      
-      // Get indices of slots that have videos
-      const filledSlotIndices = viewerSlots.map((slot, idx) => slot ? idx : -1).filter(idx => idx !== -1);
-      
-      // Check if all filled slots have ready players
-      const allReady = filledSlotIndices.every(idx => 
-        playerRefs.current[idx] && playerRefs.current[idx].isReady
-      );
-      
-      console.log(`Video readiness check: ${allReady ? 'All videos ready' : 'Some videos not ready yet'}`);
-      return allReady;
-    };
-    
-    // Start checking readiness with a small delay after slots change
-    let readinessCheckTimer = null;
-    let readinessInterval = null;
-    
-    if (lastPresetChange && viewerSlots.some(slot => !!slot)) {
-      readinessCheckTimer = setTimeout(() => {
-        readinessInterval = setInterval(() => {
-          const ready = checkIfVideosReady();
-          if (ready) {
-            setVideosReady(true);
-            clearInterval(readinessInterval);
-            // Show notification when videos are ready (via state update)
-            const successMessage = 'Videos loaded and ready to play';
-            setNotification({ message: successMessage, type: 'success' });
-            setTimeout(() => setNotification(null), 3000);
-          }
-        }, 500); // Check every 500ms
-        
-        // Set a timeout to stop checking after 10 seconds
-        setTimeout(() => {
-          if (!videosReady) {
-            clearInterval(readinessInterval);
-            console.warn('Timed out waiting for videos to be ready');
-            setVideosReady(true); // Assume ready after timeout
-          }
-        }, 10000); // 10 second timeout
-      }, 1000); // Initial 1 second delay
-    }
-    
-    return () => {
-      // Clean up timers
-      if (readinessCheckTimer) clearTimeout(readinessCheckTimer);
-      if (readinessInterval) clearInterval(readinessInterval);
-    };
-  }, [viewerSlots, lastPresetChange, videosReady]);
+    console.log("Player references updated:", 
+      playerRefs.current.map((ref, i) => ({
+        slot: i,
+        hasRef: !!ref,
+        isReady: ref?.isReady || false
+      }))
+    );
+  }, [viewerSlots]);
   
   // Calculate grid layout based on view mode
   const getGridLayout = () => {
@@ -412,20 +226,6 @@ const VideoComparisonContainer = ({
   // Play all videos
   const playAll = () => {
     const visibleSlotsCount = getVisibleSlots();
-    
-    // Check if videos are ready to play
-    const filledSlots = viewerSlots.slice(0, visibleSlotsCount).filter(slot => !!slot);
-    if (filledSlots.length === 0) {
-      showNotification('No videos loaded to play', 'warning');
-      return;
-    }
-    
-    // If videos were just loaded and aren't ready yet, show a message
-    if (!videosReady && lastPresetChange && (Date.now() - lastPresetChange < 10000)) {
-      showNotification('Videos are still loading. Please try again in a moment...', 'warning');
-      return;
-    }
-    
     let playedCount = 0;
     
     for (let i = 0; i < visibleSlotsCount; i++) {
@@ -437,11 +237,6 @@ const VideoComparisonContainer = ({
           console.error(`Error playing video ${i}:`, err);
         }
       }
-    }
-    
-    if (playedCount === 0) {
-      showNotification('Videos are not ready to play yet', 'warning');
-      return;
     }
     
     setIsPlaying(true);
@@ -514,14 +309,14 @@ const VideoComparisonContainer = ({
   };
   
   // Handle video selection from dropdown
-  const handleVideoSelect = (e, slotIndex) => {
-    if (!e.target.value) {
+  const handleVideoSelect = (slotIndex, videoId) => {
+    if (!videoId) {
       // If empty option selected, remove video from slot
       handleRemoveVideo(slotIndex);
       return;
     }
     
-    const video = youtubeVideos.find(v => v.id.toString() === e.target.value.toString());
+    const video = youtubeVideos.find(v => v.id.toString() === videoId.toString());
     if (video) {
       console.log(`Selected video for slot ${slotIndex}:`, video);
       
@@ -540,7 +335,7 @@ const VideoComparisonContainer = ({
       
       console.log(`Updated viewer slots:`, newViewerSlots);
     } else {
-      console.error(`No video found with ID: ${e.target.value}`);
+      console.error(`No video found with ID: ${videoId}`);
       showNotification('Video not found', 'error');
     }
   };
@@ -728,38 +523,6 @@ const VideoComparisonContainer = ({
         </div>
       )}
       
-      {/* Debugging info */}
-      {process.env.NODE_ENV !== 'production' && (
-        <div className="debug-info bg-yellow-100 p-2 mb-4 text-xs">
-          <p>Loaded {youtubeVideos.length} videos</p>
-          <p>Presets: {presets.length ? presets.join(', ') : 'None'}</p>
-        </div>
-      )}
-      
-      {/* SUPER PROMINENT PRESETS DROPDOWN */}
-      <div className="presets-container mb-4 p-4 bg-blue-600 border border-blue-800 rounded-lg shadow-lg">
-        <h2 className="text-xl font-bold text-white mb-3">VIDEO CATEGORY PRESETS</h2>
-        <div className="flex items-center">
-          <select
-            className="flex-1 p-4 border-2 border-blue-400 rounded-md font-medium text-blue-800 bg-white hover:border-blue-600 focus:border-blue-600 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-lg"
-            value={selectedPreset}
-            onChange={(e) => handlePresetSelect(e.target.value)}
-          >
-            <option value="">-- SELECT A VIDEO CATEGORY --</option>
-            {presets.map(preset => (
-              <option key={preset} value={preset}>
-                {preset.toUpperCase()} Videos ({youtubeVideos.filter(v => v.title.startsWith(`${preset}_`)).length})
-              </option>
-            ))}
-          </select>
-        </div>
-        {selectedPreset && (
-          <div className="mt-2 text-sm bg-blue-100 p-3 rounded text-blue-900">
-            Loaded category: <strong>{selectedPreset.toUpperCase()}</strong> ({youtubeVideos.filter(v => v.title.startsWith(`${selectedPreset}_`)).length} videos)
-          </div>
-        )}
-      </div>
-      
       {/* Layout controls */}
       <div className="mb-4 flex flex-col md:flex-row space-y-2 md:space-y-0 md:justify-between md:items-center">
         <div className="flex space-x-2">
@@ -767,25 +530,25 @@ const VideoComparisonContainer = ({
             className={`px-3 py-1 rounded ${viewMode === '1x1' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
             onClick={() => handleLayoutChange('1x1')}
           >
-            1x1
+            1×1
           </button>
           <button 
             className={`px-3 py-1 rounded ${viewMode === '1x2' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
             onClick={() => handleLayoutChange('1x2')}
           >
-            1x2
+            1×2
           </button>
           <button 
             className={`px-3 py-1 rounded ${viewMode === '2x2' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
             onClick={() => handleLayoutChange('2x2')}
           >
-            2x2
+            2×2
           </button>
           <button 
             className={`px-3 py-1 rounded ${viewMode === '2x3' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
             onClick={() => handleLayoutChange('2x3')}
           >
-            2x3
+            2×3
           </button>
         </div>
       </div>
@@ -799,19 +562,15 @@ const VideoComparisonContainer = ({
         
         {/* Video grid on the right */}
         <div className="flex-1">
-          {/* Video selection grid */}
+          {/* Video dropdowns */}
           <div className="video-selection-grid mb-4 grid gap-3" style={viewerGridStyle}>
-            {/* Generate selection slots based on view mode */}
             {Array.from({ length: getVisibleSlots() }).map((_, index) => (
-              <div 
-                key={`dropdown-${index}`} 
-                className="flex flex-col"
-              >
+              <div key={`dropdown-${index}`} className="flex flex-col">
                 <div className="flex items-center">
                   <select
                     className="flex-1 p-2 border rounded mb-1"
-                    value={viewerSlots[index]?.id || ''}
-                    onChange={(e) => handleVideoSelect(e, index)}
+                    value={viewerSlots[index] ? viewerSlots[index].id : ""}
+                    onChange={(e) => handleVideoSelect(index, e.target.value)}
                   >
                     <option value="">-- Select Video --</option>
                     {youtubeVideos.map(video => (
@@ -820,28 +579,21 @@ const VideoComparisonContainer = ({
                       </option>
                     ))}
                   </select>
-                  
                   {viewerSlots[index] && (
-                    <button 
-                      className={`ml-2 p-1 rounded ${index === leaderIndex ? 'bg-yellow-400 text-white' : 'bg-gray-200'}`}
+                    <button
+                      className="ml-2 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded px-2 py-1"
                       onClick={() => setAsLeader(index)}
-                      title={index === leaderIndex ? 'This is the leader video' : 'Set as leader video'}
+                      disabled={index === leaderIndex}
                     >
-                      {index === leaderIndex ? '👑' : '⬆️'}
+                      {index === leaderIndex ? 'Leader' : 'Set as Leader'}
                     </button>
                   )}
                 </div>
-                
-                {viewerSlots[index] && (
-                  <div className="text-sm text-gray-600 mb-1">
-                    {viewerSlots[index].title}
-                  </div>
-                )}
               </div>
             ))}
           </div>
           
-          {/* Video display grid */}
+          {/* Video grid */}
           <div className="video-grid grid gap-3" style={viewerGridStyle}>
             {Array(getVisibleSlots()).fill(null).map((_, slotIndex) => (
               <div 

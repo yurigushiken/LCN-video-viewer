@@ -78,34 +78,85 @@ export const loadYouTubeVideos = async () => {
   try {
     // Get the base URL from the running app
     const baseUrl = process.env.PUBLIC_URL || '';
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    
+    console.log('Environment detection for video loading:', { 
+      baseUrl, 
+      hostname: window.location.hostname,
+      pathname: window.location.pathname,
+      isGitHubPages
+    });
+    
+    // Hard-coded GitHub Pages URLs for better reliability
+    const repoName = 'LCN-video-viewer';
+    const githubPagesUrl = `https://yurigushiken.github.io/${repoName}/youtube_videos.json`;
     
     // Define possible URL paths to try in order
     const possibleUrls = [
-      // First try with the PUBLIC_URL
-      `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}youtube_videos.json`,
-      // Then try from the root
-      '/youtube_videos.json',
-      // Try with the LCN-video-viewer path explicitly
-      '/LCN-video-viewer/youtube_videos.json',
-      // Try relative to the current path
-      'youtube_videos.json'
-    ];
+      // For GitHub Pages, try the absolute URL first
+      isGitHubPages ? githubPagesUrl : null,
+      // Try with the PUBLIC_URL which should work in most environments
+      `${baseUrl}/youtube_videos.json`,
+      // Try at root of repository on GitHub Pages
+      isGitHubPages ? `/${repoName}/youtube_videos.json` : null,
+      // Try in the same directory as the current page
+      'youtube_videos.json',
+      // Backup relative paths
+      './youtube_videos.json',
+      '../youtube_videos.json'
+    ].filter(Boolean); // Remove null entries
+    
+    console.log('Will try to load videos from these URLs in order:', possibleUrls);
     
     let videos = [];
     let lastError = null;
+    let lastUrl = null;
     
     // Try each URL until one works
     for (const url of possibleUrls) {
       try {
         console.log(`Attempting to fetch YouTube videos from: ${url}`);
-        const response = await fetch(url);
+        lastUrl = url;
+        
+        // Add a timestamp to avoid browser caching
+        const timestamp = Date.now();
+        const fetchUrl = `${url}${url.includes('?') ? '&' : '?'}_t=${timestamp}`;
+        
+        const response = await fetch(fetchUrl, {
+          cache: 'no-store', // Skip cache to ensure fresh data
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          // Add specific options for cross-origin requests
+          mode: 'cors',
+          credentials: 'same-origin'
+        });
         
         if (response.ok) {
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            console.warn(`Response from ${url} is not JSON (${contentType}). Will try to parse anyway.`);
+          }
+          
           videos = await response.json();
-          console.log(`Successfully loaded ${videos.length} YouTube videos from ${url}`);
-          return videos;
+          
+          // Validate the response - make sure it's an array with expected fields
+          if (Array.isArray(videos) && videos.length > 0) {
+            console.log(`Successfully loaded ${videos.length} YouTube videos from ${url}`);
+            
+            // Log the first item to help debugging
+            if (videos[0]) {
+              console.log('First video object:', JSON.stringify(videos[0]).substring(0, 200) + '...');
+            }
+            
+            return videos;
+          } else {
+            console.warn(`Response from ${url} is not a valid video array. Response:`, 
+              JSON.stringify(videos).substring(0, 300) + '...');
+          }
         } else {
-          console.warn(`Could not load YouTube videos from ${url}. Status: ${response.status}`);
+          console.warn(`Could not load YouTube videos from ${url}. Status: ${response.status} ${response.statusText}`);
         }
       } catch (err) {
         lastError = err;
@@ -113,11 +164,28 @@ export const loadYouTubeVideos = async () => {
       }
     }
     
+    // Last resort: try to load embedded sample data
+    console.warn('All URLs failed, attempting to load sample data from window object');
+    if (window.sampleYouTubeVideos && Array.isArray(window.sampleYouTubeVideos)) {
+      console.log('Found sample data in window object:', window.sampleYouTubeVideos.length, 'videos');
+      return window.sampleYouTubeVideos;
+    }
+    
     // If we got here, all attempts failed
-    throw new Error(lastError?.message || 'Failed to load YouTube videos from all possible locations');
+    throw new Error(
+      `Failed to load YouTube videos from all possible locations. Last attempt: ${lastUrl}. Error: ${lastError?.message || 'Unknown error'}`
+    );
   } catch (error) {
     console.error('Error loading YouTube videos:', error);
-    return [];
+    
+    // As a last resort, fallback to the embedded sample data
+    if (window.sampleYouTubeVideos && Array.isArray(window.sampleYouTubeVideos)) {
+      console.log('Error occurred, falling back to sample data in window object:', 
+        window.sampleYouTubeVideos.length, 'videos');
+      return window.sampleYouTubeVideos;
+    }
+    
+    throw error;
   }
 };
 

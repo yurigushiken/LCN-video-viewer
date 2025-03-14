@@ -1,0 +1,164 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+// import SyncedVideoPlayer from './SyncedVideoPlayer'; // Unused import
+import YouTubeVideoPlayer from './YouTubeVideoPlayer';
+import { loadYouTubeVideos, formatTime } from '../utils/youtubeUtils';
+
+// Get API key from environment
+// const API_KEY = process.env.REACT_APP_GOOGLE_API_KEY || ''; // Unused variable
+
+const VideoComparisonContainer = ({ 
+  videoLibrary = [],
+  initialLayout = '2x2',
+  onLayoutChange = () => {}
+}) => {
+  const [leaderIndex, setLeaderIndex] = useState(0);
+  const [syncTime, setSyncTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [viewMode, setViewMode] = useState(initialLayout);
+  const [notification, setNotification] = useState(null);
+  const [viewerSlots, setViewerSlots] = useState(Array(4).fill(null));
+  const [globalStartTime] = useState(0); // Removed unused setGlobalStartTime
+  const [youtubeVideos, setYoutubeVideos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  // New state for presets
+  const [selectedPreset, setSelectedPreset] = useState('');
+  
+  const playerRefs = useRef([]);
+  // const syncIntervalRef = useRef(null); // Unused ref
+  const firstVideoIndexRef = useRef(0);
+  const lastSyncActionRef = useRef(Date.now());
+  
+  // Load YouTube videos
+  useEffect(() => {
+    const fetchYouTubeVideos = async () => {
+      try {
+        setLoading(true);
+        setLoadError(null);
+        console.log('Starting to load YouTube videos');
+        
+        const videos = await loadYouTubeVideos();
+        console.log('YouTube videos loaded:', videos);
+        
+        if (videos && videos.length > 0) {
+          // Videos are already sorted alphabetically by the earlier change
+          setYoutubeVideos([...videos].sort((a, b) => a.title.localeCompare(b.title)));
+          console.log('Set YouTube videos state with', videos.length, 'videos');
+        } else {
+          console.error('No YouTube videos found or empty array returned');
+          setLoadError('No YouTube videos found. Please check network tab for details.');
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading YouTube videos:', error);
+        setLoadError(`Failed to load YouTube videos: ${error.message}`);
+        setLoading(false);
+      }
+    };
+    
+    fetchYouTubeVideos();
+  }, []);
+  
+  // Calculate available presets from video titles
+  const presets = useMemo(() => {
+    if (!youtubeVideos || youtubeVideos.length === 0) {
+      return [];
+    }
+    
+    // Extract prefixes like "gw_", "hw_", etc.
+    const prefixSet = new Set();
+    youtubeVideos.forEach(video => {
+      const match = video.title.match(/^([a-z]+)_/);
+      if (match && match[1]) {
+        prefixSet.add(match[1]);
+      }
+    });
+    
+    return Array.from(prefixSet).sort();
+  }, [youtubeVideos]);
+  
+  // Handle preset selection
+  const handlePresetSelect = (presetValue) => {
+    setSelectedPreset(presetValue);
+    
+    if (!presetValue) {
+      // If empty selection, don't change anything
+      return;
+    }
+    
+    // Filter videos to this category
+    const filteredVideos = youtubeVideos.filter(video => 
+      video.title.startsWith(`${presetValue}_`)
+    );
+    
+    // Sort videos by age ("adult" first, then numeric order)
+    const sortedVideos = [...filteredVideos].sort((a, b) => {
+      // Put adult first
+      if (a.title.includes('adult')) return -1;
+      if (b.title.includes('adult')) return 1;
+      
+      // Extract numbers for comparison
+      const numA = parseInt(a.title.match(/(\d+)/)?.[1] || 0);
+      const numB = parseInt(b.title.match(/(\d+)/)?.[1] || 0);
+      
+      return numA - numB;
+    });
+    
+    console.log(`Preset ${presetValue} selected. Found ${sortedVideos.length} videos:`, 
+      sortedVideos.map(v => v.title)
+    );
+    
+    // Load videos into slots
+    const visibleSlots = getVisibleSlots();
+    const newViewerSlots = [...viewerSlots];
+    
+    // Fill slots with sorted videos, up to the number of visible slots
+    for (let i = 0; i < Math.min(sortedVideos.length, visibleSlots); i++) {
+      newViewerSlots[i] = sortedVideos[i];
+    }
+    
+    setViewerSlots(newViewerSlots);
+    showNotification(`Loaded ${Math.min(sortedVideos.length, visibleSlots)} ${presetValue} videos`, 'success');
+  };
+  
+  // Debug player references
+  useEffect(() => {
+    console.log("Player references updated:", 
+      playerRefs.current.map((ref, i) => ({
+        slot: i,
+        hasRef: !!ref,
+        isReady: ref?.isReady || false
+      }))
+    );
+  }, [viewerSlots]);
+  
+  // Include the rest of the component code here...
+  // For now I'm adding a placeholder for where the presets dropdown should go in the JSX
+  
+  /* In the JSX return, add this before the video dropdown section:
+  
+  {/* Presets dropdown - with more obvious styling */}
+  <div className="presets-container mb-4 p-3 bg-blue-50 border border-blue-300 rounded-lg">
+    <div className="flex items-center">
+      <label className="font-bold text-lg mr-2 text-blue-800">Presets:</label>
+      <select
+        className="flex-1 p-3 border rounded mb-1 bg-blue-100 border-blue-300 font-medium text-blue-800"
+        value={selectedPreset}
+        onChange={(e) => handlePresetSelect(e.target.value)}
+      >
+        <option value="">-- Select Video Category Preset --</option>
+        {presets.map(preset => (
+          <option key={preset} value={preset}>
+            {preset.toUpperCase()} Videos
+          </option>
+        ))}
+      </select>
+    </div>
+    <div className="text-sm text-blue-600 mt-1">
+      Select a category to automatically load videos in sequence
+    </div>
+  </div>
+  
+  */
+} 
