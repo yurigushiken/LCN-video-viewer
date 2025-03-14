@@ -15,4 +15,4 @@ The main application currently uses `youtube_videos.json` in the public director
 
 ## Archive Date
 
-These files were archived on March 13, 2025 as part of code cleanup and organization. 
+These files were archived as part of code cleanup and organization. 
